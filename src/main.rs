@@ -1,5 +1,7 @@
 extern crate crossbeam;
 extern crate num;
+extern crate slice_of_array;
+use ::slice_of_array::prelude::*;
 use image::png::PNGEncoder;
 use image::ColorType;
 use num::Complex;
@@ -117,7 +119,7 @@ fn test_pixel_to_point() {
 /// arguments specify points on the complex plane corresponding to the upper-
 /// left and lower-right corners of the pixel buffer.
 fn render(
-    pixels: &mut [u8],
+    pixels: &mut [(u8, u8, u8)],
     bounds: (usize, usize),
     upper_left: Complex<f64>,
     lower_right: Complex<f64>,
@@ -128,8 +130,12 @@ fn render(
         for column in 0..bounds.0 {
             let point = pixel_to_point(bounds, (column, row), upper_left, lower_right);
             pixels[row * bounds.0 + column] = match escape_time(point, 255) {
-                None => 0,
-                Some(count) => 255 - count as u8,
+                None => (10, 10, 10),
+                Some(count) => (
+                    ((count + 10) % 256) as u8,
+                    ((count + 30) % 256) as u8,
+                    ((count + 100) % 256) as u8,
+                ),
             };
         }
     }
@@ -142,12 +148,8 @@ fn write_image(
 ) -> Result<(), std::io::Error> {
     let output = File::create(filename)?;
     let encoder = PNGEncoder::new(output);
-    encoder.encode(
-        &pixels,
-        bounds.0 as u32,
-        bounds.1 as u32,
-        ColorType::Gray(8),
-    )?;
+
+    encoder.encode(&pixels, bounds.0 as u32, bounds.1 as u32, ColorType::RGB(8))?;
     Ok(())
 }
 
@@ -177,15 +179,13 @@ fn main() {
     let upper_left = parse_complex(&args[3]).expect("error parsing upper left corner point");
     let lower_right = parse_complex(&args[4]).expect("error parsing lower right corner point");
 
-    let mut pixels = vec![0; bounds.0 * bounds.1];
-
-    // render(&mut pixels, bounds, upper_left, lower_right);
+    let mut pixels = vec![(0, 0, 0); bounds.0 * bounds.1];
 
     let threads = 8;
     let rows_per_band = bounds.1 / threads + 1;
 
     {
-        let bands: Vec<&mut [u8]> = pixels.chunks_mut(rows_per_band * bounds.0).collect();
+        let bands: Vec<&mut [(u8, u8, u8)]> = pixels.chunks_mut(rows_per_band * bounds.0).collect();
 
         crossbeam::scope(|spawner| {
             for (i, band) in bands.into_iter().enumerate() {
@@ -201,5 +201,10 @@ fn main() {
         });
     }
 
-    write_image(&args[1], &pixels, bounds).expect("error writing PNG file");
+    let rgb_image = pixels
+        .iter()
+        .map(|&x| [x.0 as u8, x.1 as u8, x.2 as u8])
+        .collect::<Vec<_>>();
+
+    write_image(&args[1], rgb_image.flat(), bounds).expect("error writing PNG file");
 }
