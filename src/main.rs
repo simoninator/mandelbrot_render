@@ -1,5 +1,7 @@
 extern crate crossbeam;
 extern crate num;
+extern crate slice_of_array;
+use ::slice_of_array::prelude::*;
 use image::png::PNGEncoder;
 use image::ColorType;
 use num::Complex;
