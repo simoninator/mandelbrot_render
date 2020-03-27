@@ -37,48 +37,61 @@ environment:
 
 ### MSVC Toolchains ###
 
-# The MSVC toolchain is not supported for this program right now
+  # Stable 64-bit MSVC
+    - channel: stable
+      target: x86_64-pc-windows-msvc
+  # Stable 32-bit MSVC
+    - channel: stable
+      target: i686-pc-windows-msvc
+  # Beta 64-bit MSVC
+    - channel: beta
+      target: x86_64-pc-windows-msvc
+  # Beta 32-bit MSVC
+    - channel: beta
+      target: i686-pc-windows-msvc
+  # Nightly 64-bit MSVC
+    - channel: nightly
+      target: x86_64-pc-windows-msvc
+      #cargoflags: --features "unstable"
+  # Nightly 32-bit MSVC
+    - channel: nightly
+      target: i686-pc-windows-msvc
+      #cargoflags: --features "unstable"
 
 ### GNU Toolchains ###
 
   # Stable 64-bit GNU
     - channel: stable
-      platform: x64
       target: x86_64-pc-windows-gnu
-      configuration: Debug
-      BITS: 64
   # Stable 32-bit GNU
     - channel: stable
-      platform: x86
       target: i686-pc-windows-gnu
-      configuration: Debug
-      BITS: 32
-  # 1.31 64-bit GNU
-    - channel: 1.31.0
-      platform: x64
+  # Beta 64-bit GNU
+    - channel: beta
       target: x86_64-pc-windows-gnu
-      configuration: Debug
-      BITS: 64
-  # 1.31 32-bit GNU
-    - channel: 1.31.0
-      platform: x86
+  # Beta 32-bit GNU
+    - channel: beta
       target: i686-pc-windows-gnu
-      configuration: Debug
-      BITS: 32
-  # Stable 64-bit GNU (release & package)
-    - channel: stable
-      platform: x64
+  # Nightly 64-bit GNU
+    - channel: nightly
       target: x86_64-pc-windows-gnu
-      configuration: Release
-      BITS: 64
-      PACKAGE: true
-  # Stable 32-bit GNU (release & package)
-    - channel: stable
-      platform: x86
+      #cargoflags: --features "unstable"
+  # Nightly 32-bit GNU
+    - channel: nightly
       target: i686-pc-windows-gnu
-      configuration: Release
-      BITS: 32
-      PACKAGE: true
+      #cargoflags: --features "unstable"
+
+### Allowed failures ###
+
+# See Appveyor documentation for specific details. In short, place any channel or targets you wish
+# to allow build failures on (usually nightly at least is a wise choice). This will prevent a build
+# or test failure in the matching channels/targets from failing the entire build.
+matrix:
+  allow_failures:
+    - channel: nightly
+
+# If you only care about stable channel build failures, uncomment the following line:
+    #- channel: beta
 
 ## Install Script ##
 
@@ -89,25 +102,20 @@ environment:
 # For simple configurations, instead of using the build matrix, you can simply set the
 # default-toolchain and default-host manually here.
 install:
-  - IF "%BITS%" == "32" SET ARCH=i686
-  - IF "%BITS%" == "64" SET ARCH=x86_64
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
   - rustup-init -yv --default-toolchain %channel% --default-host %target%
-  - set PATH=C:\msys64\mingw%BITS%\bin;C:\msys64\usr\bin;%USERPROFILE%\.cargo\bin;%PATH%
+  - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
-  - pacman --noconfirm -S mingw-w64-%ARCH%-gtk3 mingw-w64-%ARCH%-adwaita-icon-theme
 
 ## Build Script ##
 
-# Build the project using optimizations and removing the console when in release mode
-build_script:
-  - if "%configuration%"=="Release" (
-      cargo rustc --release --bin gattii -- -C link-args=-mwindows
-    ) else (
-      cargo build
-    )
+# 'cargo test' takes care of building for us, so disable Appveyor's build stage. This prevents
+# the "directory does not contain a project or solution file" error.
+build: false
 
-# There are no tests, so don't bother running a test stage
-test: 
-  - cargo test
+# Uses 'cargo test' to run tests and build. Alternatively, the project may call compiled programs
+#directly or perform other testing commands. Rust will automatically be placed in the PATH
+# environment variable.
+test_script:
+  - cargo test --verbose %cargoflags%

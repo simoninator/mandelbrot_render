@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/simoninator/mandelbrot_render.svg?branch=master)](https://travis-ci.org/simoninator/mandelbrot_render) ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/simoninator/mandelbrot_render)
+[![Build Status](https://travis-ci.org/simoninator/mandelbrot_render.svg?branch=master)](https://travis-ci.org/simoninator/mandelbrot_render)[![Build status](https://ci.appveyor.com/api/projects/status/c19t456e4oes4l1u?svg=true)](https://ci.appveyor.com/project/simoninator/mandelbrot-render) ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/simoninator/mandelbrot_render)[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)![Maintenance](https://img.shields.io/maintenance/yes/2020)![GitHub last commit](https://img.shields.io/github/last-commit/simoninator/mandelbrot_render)
 
 A simple [Mandelbrot](https://en.wikipedia.org/wiki/Mandelbrot_set) renderer
 ----------------------------
