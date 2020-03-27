@@ -12,7 +12,7 @@ $ mandelbrot FILE PIXELS UPPERLEFT LOWERRIGHT
 
 Example:
 ```bash
-$ mandelbrot mandel.png 1440x900 -1.20,0.35 -1.0,0.20
+$ mandelbrot mandel.png 3000x2000 -2,1 1,-1
 ```
 
 And it looks like:
