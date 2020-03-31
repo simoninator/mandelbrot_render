@@ -1,11 +1,16 @@
 extern crate crossbeam;
 extern crate num;
+extern crate probability;
 extern crate slice_of_array;
+
 use ::slice_of_array::prelude::*;
 use image::png::PNGEncoder;
 use image::ColorType;
 use num::Complex;
+use probability::prelude::Continuous;
+use probability::prelude::Gaussian;
 use std::fs::File;
+use std::f64;
 use std::str::FromStr;
 
 /// Try to determina if 'c' is in the Mandelbrot set, using at most 'limit' iterations to decide.
@@ -112,6 +117,44 @@ fn test_pixel_to_point() {
     );
 }
 
+/// Calculate the RGB value of the mandelbrot set.
+///
+/// The RGB value is calculated by three gaussian fits. For each color of red,
+/// green and blue one gaussian is calculated. Each input value creates the superset
+/// of the three gaussians and therefore three RGB colors
+///
+/// The mean value of the three gaussian are the limit divided by three and shifted to the left
+/// by a sixth of the mean. 
+/// The variance is calculated by Full Width Half Mean (FWHM) approxiamtion.
+fn calculate_rgb(limit: u32, value: f64) -> (u8, u8, u8) {
+    let fwhm = limit as f64 / 2.0;
+    let sigma = fwhm / 2.3548; // see Gaussian Full Width Half Maximum Approximation
+
+    let base_point_blue = limit as f64 / 6.0;
+    let base_point_green = base_point_blue + limit as f64 / 3.0;
+    let base_point_red = base_point_green + limit as f64 / 3.0;
+
+    let red_gaussian = Gaussian::new(base_point_red, sigma);
+    let green_gaussian = Gaussian::new(base_point_green, sigma);
+    let blue_gaussian = Gaussian::new(base_point_blue, sigma);
+
+    let scale = limit as f64 * (2.0 * f64::consts::PI * sigma.powi(2)).sqrt();
+
+    let red = scale * red_gaussian.density(value);
+    let green = scale * green_gaussian.density(value);
+    let blue = scale * blue_gaussian.density(value);
+
+    (red as u8, green as u8, blue as u8)
+}
+
+#[test]
+fn test_get_rgb() {
+    assert_eq!(calculate_rgb(255, 42.5), (1, 74, 255));
+    assert_eq!(calculate_rgb(255, 127.5), (74, 255, 74));
+    assert_eq!(calculate_rgb(255, 212.5), (255, 74, 1));
+    assert_eq!(calculate_rgb(255, 85.0), (15, 187, 187));
+}
+
 /// Render a rectangle of the Mandelbrot set into a buffer of pixels.
 ///
 /// The `bounds` argument gives the width and height of the buffer `pixels`,
@@ -125,17 +168,13 @@ fn render(
     lower_right: Complex<f64>,
 ) {
     assert!(pixels.len() == bounds.0 * bounds.1);
-
+    let limit = 255;
     for row in 0..bounds.1 {
         for column in 0..bounds.0 {
             let point = pixel_to_point(bounds, (column, row), upper_left, lower_right);
-            pixels[row * bounds.0 + column] = match escape_time(point, 255) {
-                None => (10, 10, 10),
-                Some(count) => (
-                    ((count + 10) % 256) as u8,
-                    ((count + 30) % 256) as u8,
-                    ((count + 100) % 256) as u8,
-                ),
+            pixels[row * bounds.0 + column] = match escape_time(point, limit) {
+                None => (40, 40, 40),
+                Some(count) => calculate_rgb(limit, count as f64),
             };
         }
     }
